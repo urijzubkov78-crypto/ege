@@ -1,0 +1,14 @@
+[Unit]
+Description=Telegram spelling cards bot
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/telegram-spelling-bot
+Environment=TELEGRAM_BOT_TOKEN=YOUR_TOKEN_HERE
+ExecStart=/opt/telegram-spelling-bot/.venv/bin/python /opt/telegram-spelling-bot/bot.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
