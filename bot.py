@@ -15,6 +15,7 @@ from telegram.ext import (
 DATA_PATH = Path(__file__).parent / "data" / "cards.json"
 VOWEL_OPTIONS = ["а", "е", "ё", "и", "о", "у", "ы", "э", "ю", "я"]
 VOWEL_SET = set(VOWEL_OPTIONS)
+MENU_CALLBACK = "menu"
 
 
 def load_cards() -> list[dict[str, str]]:
@@ -52,18 +53,24 @@ def build_vowel_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(vowel, callback_data=vowel) for vowel in row]
         for row in rows
     ]
+    keyboard.append([InlineKeyboardButton("Главное меню", callback_data=MENU_CALLBACK)])
     return InlineKeyboardMarkup(keyboard)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await show_menu(update, context)
+
+
+async def show_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = (
-        "Привет! Я показываю карточки со словами с непроверяемыми "
+        "Главное меню\n\n"
+        "Я показываю карточки со словами с непроверяемыми "
         "безударными гласными в корне.\n\n"
         "Команды:\n"
-        "/card — случайная карточка\n"
+        "/card — начать тренировку\n"
         "/next — следующая карточка\n"
-        "/help — справка\n"
-        "/stats — статистика"
+        "/stats — статистика\n"
+        "/help — справка"
     )
     await update.effective_message.reply_text(message)
 
@@ -77,9 +84,13 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 
 async def send_card(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await send_card_to_message(update.effective_message, context)
+
+
+async def send_card_to_message(message, context: ContextTypes.DEFAULT_TYPE) -> None:
     cards = context.application.bot_data.setdefault("cards", load_cards())
     if not cards:
-        await update.effective_message.reply_text("Нет карточек для отображения.")
+        await message.reply_text("Нет карточек для отображения.")
         return
     order = context.user_data.get("order")
     position = context.user_data.get("position", 0)
@@ -94,7 +105,7 @@ async def send_card(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     context.user_data["position"] = position + 1
     card = cards[index]
     context.user_data["current_card"] = card
-    await update.effective_message.reply_text(
+    await message.reply_text(
         format_card(card),
         parse_mode=ParseMode.HTML,
         reply_markup=build_vowel_keyboard(),
@@ -128,6 +139,8 @@ async def check_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             f"(гласная «{correct}»)."
         )
     await query.message.reply_text(response, parse_mode=ParseMode.HTML)
+    if selected == correct:
+        await send_card_to_message(query.message, context)
 
 
 async def show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -141,6 +154,14 @@ async def show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     await update.effective_message.reply_text(message, parse_mode=ParseMode.HTML)
 
 
+async def handle_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+    await show_menu(update, context)
+
+
 def main() -> None:
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
@@ -150,10 +171,16 @@ def main() -> None:
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("menu", show_menu))
     application.add_handler(CommandHandler("card", send_card))
     application.add_handler(CommandHandler("next", send_card))
     application.add_handler(CommandHandler("stats", show_stats))
-    application.add_handler(CallbackQueryHandler(check_answer))
+    application.add_handler(CallbackQueryHandler(handle_menu_callback, pattern=f"^{MENU_CALLBACK}$"))
+    application.add_handler(
+        CallbackQueryHandler(
+            check_answer, pattern=f"^[{''.join(VOWEL_OPTIONS)}]$"
+        )
+    )
 
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
