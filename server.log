@@ -1,0 +1,7 @@
+[2024-01-15 10:30:15] INFO: User admin logged in from 192.168.1.1
+[2024-01-15 10:35:22] ERROR: Database connection failed
+[2024-01-15 10:40:18] WARNING: High memory usage detected (85%)
+[2024-01-15 10:45:33] INFO: Backup completed successfully
+[2024-01-15 10:50:47] ERROR: File not found: /var/www/data.txt
+[2024-01-15 10:55:12] INFO: User john logged out
+[2024-01-15 11:00:05] WARNING: Disk space low (10% remaining)

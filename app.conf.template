@@ -1,0 +1,12 @@
+# Конфигурация приложения
+[Database]
+host = localhost
+port = 3306
+name = test_db
+user = default_user
+password = default_pass
+
+[Server]
+port = 8080
+debug = true
+log_level = INFO
